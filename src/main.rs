@@ -26,7 +26,7 @@ struct Options {
 
     /// How many holidays to retrieve.
     #[structopt(short, long, default_value = "5")]
-    number: u32,
+    number: usize,
 
     /// Country code for which to look up holidays.
     ///
@@ -65,7 +65,7 @@ fn print_holiday(
     let counties = comma_sep(&counties);
     let types = comma_sep(&types);
 
-    println!("{date} {name:40} {counties:25} {types}")
+    println!("{date} {name:40} {counties:15} {types}")
 }
 
 fn main() -> color_eyre::eyre::Result<()> {

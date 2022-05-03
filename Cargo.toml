@@ -3,15 +3,24 @@ name = "holidate"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+# colorful, more human-friendly error output
 color-eyre = { version = "0.6.1", default_features = false }
+# location of cache directory
 dirs = "4.0.0"
+# `.join`, used in `fn comma_sep`
 itertools = "0.10.0"
+# `Display` for `HolidayType`
 parse-display = "0.5.5"
-reqwest = "0.11.3"
+# easy http requests / responses
+reqwest = { version = "0.11.3", features = ["blocking", "json"] }
+# serialization / deserialization
+serde = { version = "1.0.126", features = ["derive"] }
+# json deserialization
 serde_json = "1.0.64"
+# cli option parsing
 structopt = "0.3.21"
+# error definition
 thiserror = "1.0.25"
-time = { version = "0.3.9", features = ["local-offset", "macros", "parsing"] }
+# date type
+time = { version = "0.3.9", features = ["local-offset", "macros", "parsing", "serde"] }
