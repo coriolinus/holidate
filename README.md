@@ -9,3 +9,4 @@ Get the next several holidays for a given country from the API at <https://date.
 - Line formatter for `Holiday` lives in `main.rs` instead of as a method on the type because it is only relevant to the CLI context.
 - We use blocking requests because we can't reasonably speed up this API asynchronously, and blocking is simpler
 - API is assumed to be good; there isn't particular handling for many years without a holiday, etc
+- We use a `>=` relation when comparing the holiday's date against the current date; the spec was a bit ambiguous about whether we'd prefer a `>` relation there instead.
