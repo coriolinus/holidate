@@ -1,0 +1,17 @@
+[package]
+name = "holidate"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+color-eyre = { version = "0.6.1", default_features = false }
+dirs = "4.0.0"
+itertools = "0.10.0"
+parse-display = "0.5.5"
+reqwest = "0.11.3"
+serde_json = "1.0.64"
+structopt = "0.3.21"
+thiserror = "1.0.25"
+time = { version = "0.3.9", features = ["local-offset", "macros", "parsing"] }
