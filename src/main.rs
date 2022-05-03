@@ -62,8 +62,8 @@ fn print_holiday(
         types,
     }: &Holiday,
 ) {
-    let counties = comma_sep(&counties);
-    let types = comma_sep(&types);
+    let counties = comma_sep(counties);
+    let types = comma_sep(types);
 
     println!("{date} {name:40} {counties:15} {types}")
 }

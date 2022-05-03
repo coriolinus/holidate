@@ -31,7 +31,7 @@ pub fn next_holidays(
     let mut year = relative_to.year();
     let mut holidays = Vec::new();
     while holidays.len() < quantity {
-        let mut new_holidays: Vec<Holiday> = get_holidays_cached(year, &country)?;
+        let mut new_holidays: Vec<Holiday> = get_holidays_cached(year, country)?;
         new_holidays.retain(|holiday| holiday.date >= relative_to);
         holidays.extend(new_holidays);
         year += 1;
