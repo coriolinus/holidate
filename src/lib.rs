@@ -28,7 +28,6 @@ pub fn next_holidays(
     relative_to: Date,
     quantity: usize,
 ) -> Result<Vec<Holiday>, Error> {
-    let country = country.to_uppercase();
     let mut year = relative_to.year();
     let mut holidays = Vec::new();
     while holidays.len() < quantity {
