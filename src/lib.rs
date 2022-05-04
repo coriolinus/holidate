@@ -78,6 +78,10 @@ impl CachedHoliday {
 
 /// The `CacheManager` wraps a client, so that in the event we require several
 /// requests, they can reuse the connection.
+///
+/// This typically happens when there aren't enough holidays left in the year
+/// to fill the requested quantity, so we need to page forward and request the
+/// subsequent year's.
 struct CacheManager {
     client: reqwest::blocking::Client,
 }
@@ -107,12 +111,13 @@ impl CacheManager {
             return Ok(holidays);
         }
 
-        let body = self
-            .client
-            .get(uri_for(year, &country_code))
-            .send()?
-            .error_for_status()?
-            .bytes()?;
+        let response = self.client.get(uri_for(year, &country_code)).send()?;
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            // It's pretty unclear when a fake/unknown country code will return
+            // a 404 vs an empty body, but we have to handle both cases.
+            return Err(Error::UnknownCountry);
+        }
+        let body = response.error_for_status()?.bytes()?;
 
         // returning an empty body with a 200 status code isn't the most convenient
         // possible way for the API to indicate that it doesn't know a particular
