@@ -162,9 +162,12 @@ pub fn next_holidays(
     let cache_manager = CacheManager::new()?;
 
     while holidays.len() < quantity {
-        let mut new_holidays: Vec<Holiday> = cache_manager.get_holidays(year, country_code)?;
-        new_holidays.retain(|holiday| holiday.date >= relative_to);
-        holidays.extend(new_holidays);
+        let new_holidays: Vec<Holiday> = cache_manager.get_holidays(year, country_code)?;
+        holidays.extend(
+            new_holidays
+                .into_iter()
+                .filter(|holiday| holiday.date >= relative_to),
+        );
         year += 1;
     }
     holidays.truncate(quantity);
