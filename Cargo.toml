@@ -13,7 +13,7 @@ itertools = "0.10.0"
 # `Display` for `HolidayType`
 parse-display = "0.5.5"
 # easy http requests / responses
-reqwest = { version = "0.11.3", features = ["blocking", "json"] }
+reqwest = { version = "0.11.3", features = ["blocking"] }
 # serialization / deserialization
 serde = { version = "1.0.126", features = ["derive"] }
 # json deserialization

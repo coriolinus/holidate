@@ -106,10 +106,28 @@ fn get_holidays_cached(year: i32, country_code: &str) -> Result<Vec<Holiday>, Er
         return Ok(holidays);
     }
 
-    // TODO! intercept empty body error, produce UnknownCountry error
-    let holidays = reqwest::blocking::get(uri_for(year, &country_code))?
+    let client = reqwest::blocking::ClientBuilder::new()
+        .timeout(Some(
+            Duration::seconds(2)
+                .try_into()
+                .expect("std Duration can express 2 seconds"),
+        ))
+        .build()?;
+
+    let body = client
+        .get(uri_for(year, &country_code))
+        .send()?
         .error_for_status()?
-        .json()?;
+        .bytes()?;
+
+    // returning an empty body with a 200 status code isn't the most convenient
+    // possible way for the API to indicate that it doesn't know a particular
+    // country code, but it's not the worst thing in the world.
+    if body.is_empty() {
+        return Err(Error::UnknownCountry);
+    }
+
+    let holidays = serde_json::from_slice(&body)?;
 
     let cache = CachedHoliday {
         fetched: OffsetDateTime::now_utc(),
