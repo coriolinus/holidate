@@ -76,6 +76,66 @@ impl CachedHoliday {
     }
 }
 
+/// The `CacheManager` wraps a client, so that in the event we require several
+/// requests, they can reuse the connection.
+struct CacheManager {
+    client: reqwest::blocking::Client,
+}
+
+impl CacheManager {
+    fn new() -> Result<Self, Error> {
+        let two_seconds = Some(
+            Duration::seconds(2)
+                .try_into()
+                .expect("std Duration can express 2 seconds"),
+        );
+        let client = reqwest::blocking::ClientBuilder::new()
+            .https_only(true)
+            .timeout(two_seconds)
+            .tcp_keepalive(two_seconds)
+            .build()?;
+
+        Ok(Self { client })
+    }
+
+    fn get_holidays(&self, year: i32, country_code: &str) -> Result<Vec<Holiday>, Error> {
+        // the cache only ever deals with lowercase country codes, so let's compute
+        // that here and use it throughout
+        let country_code = country_code.to_lowercase();
+
+        if let Some(holidays) = CachedHoliday::load(year, &country_code) {
+            return Ok(holidays);
+        }
+
+        let body = self
+            .client
+            .get(uri_for(year, &country_code))
+            .send()?
+            .error_for_status()?
+            .bytes()?;
+
+        // returning an empty body with a 200 status code isn't the most convenient
+        // possible way for the API to indicate that it doesn't know a particular
+        // country code, but it's not the worst thing in the world.
+        if body.is_empty() {
+            return Err(Error::UnknownCountry);
+        }
+
+        let holidays = serde_json::from_slice(&body)?;
+
+        let cache = CachedHoliday {
+            fetched: OffsetDateTime::now_utc(),
+            year,
+            country_code,
+            holidays,
+        };
+        cache.store()?;
+
+        Ok(cache.holidays)
+    }
+}
+
+/// Get the next several holidays in a specified country on or after a particular date.
 pub fn next_holidays(
     country: &str,
     relative_to: Date,
@@ -83,8 +143,10 @@ pub fn next_holidays(
 ) -> Result<Vec<Holiday>, Error> {
     let mut year = relative_to.year();
     let mut holidays = Vec::new();
+    let cache_manager = CacheManager::new()?;
+
     while holidays.len() < quantity {
-        let mut new_holidays: Vec<Holiday> = get_holidays_cached(year, country)?;
+        let mut new_holidays: Vec<Holiday> = cache_manager.get_holidays(year, country)?;
         new_holidays.retain(|holiday| holiday.date >= relative_to);
         holidays.extend(new_holidays);
         year += 1;
@@ -95,49 +157,6 @@ pub fn next_holidays(
 
 fn uri_for(year: i32, country_code: &str) -> String {
     format!("https://date.nager.at/api/v3/publicholidays/{year}/{country_code}")
-}
-
-fn get_holidays_cached(year: i32, country_code: &str) -> Result<Vec<Holiday>, Error> {
-    // the cache only ever deals with lowercase country codes, so let's compute
-    // that here and use it throughout
-    let country_code = country_code.to_lowercase();
-
-    if let Some(holidays) = CachedHoliday::load(year, &country_code) {
-        return Ok(holidays);
-    }
-
-    let client = reqwest::blocking::ClientBuilder::new()
-        .timeout(Some(
-            Duration::seconds(2)
-                .try_into()
-                .expect("std Duration can express 2 seconds"),
-        ))
-        .build()?;
-
-    let body = client
-        .get(uri_for(year, &country_code))
-        .send()?
-        .error_for_status()?
-        .bytes()?;
-
-    // returning an empty body with a 200 status code isn't the most convenient
-    // possible way for the API to indicate that it doesn't know a particular
-    // country code, but it's not the worst thing in the world.
-    if body.is_empty() {
-        return Err(Error::UnknownCountry);
-    }
-
-    let holidays = serde_json::from_slice(&body)?;
-
-    let cache = CachedHoliday {
-        fetched: OffsetDateTime::now_utc(),
-        year,
-        country_code,
-        holidays,
-    };
-    cache.store()?;
-
-    Ok(cache.holidays)
 }
 
 /// Helper for serde to deserialize a `null` value as its default value.
