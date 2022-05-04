@@ -7,6 +7,9 @@ use time::{Date, Duration, OffsetDateTime};
 /// again to check for updates.
 const CACHE_FADEOUT: Duration = Duration::hours(24);
 
+/// Type of holiday.
+///
+/// The Nager API specifies these types of holiday without explaining much about what their precise semantics are.
 #[derive(Debug, parse_display::Display, Deserialize, Serialize)]
 pub enum HolidayType {
     Public,
@@ -17,15 +20,23 @@ pub enum HolidayType {
     Observance,
 }
 
+/// A Holiday is a recurring officially named day in recognition or commemoration of a
+/// certain event or celebration.
 // The Nager API provides several other fields than these, but we don't care
 // about them for this use case, and `serde_json` conveniently just ignores
 // any fields which aren't present in the struct.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Holiday {
+    /// The date of this instance of the holiday.
     pub date: Date,
+    /// Holiday's name, in English.
     pub name: String,
+    /// If this holiday is not celebrated throughout the nation in question, which sub-regions it is celebrated in.
     #[serde(deserialize_with = "deserialize_null_default")]
     pub counties: Vec<String>,
+    /// What type(s) of holiday this is.
+    ///
+    /// May affect what things are closed on this holiday.
     pub types: Vec<HolidayType>,
 }
 
@@ -142,7 +153,7 @@ impl CacheManager {
 
 /// Get the next several holidays in a specified country on or after a particular date.
 pub fn next_holidays(
-    country: &str,
+    country_code: &str,
     relative_to: Date,
     quantity: usize,
 ) -> Result<Vec<Holiday>, Error> {
@@ -151,7 +162,7 @@ pub fn next_holidays(
     let cache_manager = CacheManager::new()?;
 
     while holidays.len() < quantity {
-        let mut new_holidays: Vec<Holiday> = cache_manager.get_holidays(year, country)?;
+        let mut new_holidays: Vec<Holiday> = cache_manager.get_holidays(year, country_code)?;
         new_holidays.retain(|holiday| holiday.date >= relative_to);
         holidays.extend(new_holidays);
         year += 1;
