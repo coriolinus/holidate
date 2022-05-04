@@ -31,9 +31,10 @@ pub struct Holiday {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct CachedHoliday {
-    /// when this cached page was fetched
+    /// when this cached page was fetched, for fadeout
     fetched: OffsetDateTime,
     year: i32,
+    /// note that this is only ever lowercase
     country_code: String,
     holidays: Vec<Holiday>,
 }
@@ -43,7 +44,7 @@ impl CachedHoliday {
         Ok(dirs::cache_dir()
             .ok_or(Error::NoCacheDir)?
             .join("holidate")
-            .join(country_code.to_lowercase())
+            .join(country_code)
             .join(format!("{year}.json")))
     }
 
@@ -96,20 +97,24 @@ fn uri_for(year: i32, country_code: &str) -> String {
     format!("https://date.nager.at/api/v3/publicholidays/{year}/{country_code}")
 }
 
-fn get_holidays_cached(year: i32, country: &str) -> Result<Vec<Holiday>, Error> {
-    if let Some(holidays) = CachedHoliday::load(year, country) {
+fn get_holidays_cached(year: i32, country_code: &str) -> Result<Vec<Holiday>, Error> {
+    // the cache only ever deals with lowercase country codes, so let's compute
+    // that here and use it throughout
+    let country_code = country_code.to_lowercase();
+
+    if let Some(holidays) = CachedHoliday::load(year, &country_code) {
         return Ok(holidays);
     }
 
     // TODO! intercept empty body error, produce UnknownCountry error
-    let holidays = reqwest::blocking::get(uri_for(year, country))?
+    let holidays = reqwest::blocking::get(uri_for(year, &country_code))?
         .error_for_status()?
         .json()?;
 
     let cache = CachedHoliday {
         fetched: OffsetDateTime::now_utc(),
         year,
-        country_code: country.to_string(),
+        country_code,
         holidays,
     };
     cache.store()?;
