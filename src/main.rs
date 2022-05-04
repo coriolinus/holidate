@@ -28,6 +28,10 @@ struct Options {
     #[structopt(short, long, default_value = "5")]
     number: usize,
 
+    /// When set, emit JSON instead of columnar data.
+    #[structopt(short, long)]
+    json: bool,
+
     /// Country code for which to look up holidays.
     ///
     /// Must be a member of the list at <https://date.nager.at/Country>.
@@ -76,7 +80,11 @@ fn main() -> color_eyre::eyre::Result<()> {
     for holiday in
         holidate::next_holidays(&options.country_code, options.relative_to(), options.number)?
     {
-        print_holiday(&holiday);
+        if options.json {
+            println!("{}", serde_json::to_string(&holiday)?);
+        } else {
+            print_holiday(&holiday);
+        }
     }
 
     Ok(())
